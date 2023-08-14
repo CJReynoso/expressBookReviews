@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 let books = require("./booksdb.js");
 const regd_users = express.Router();
 
-let users= [{"username":"Batu", "password":"123456"}]
+let users= [{"username":"Batu", "password":"123456"}, {"username":"Usr1", "password":"3210"}]
 
 const isValid = (username)=>{ 
     let userswithsamename = users.filter((user)=>{
@@ -64,8 +64,67 @@ regd_users.post("/login", (req,res) => {
 
 // Add a book review
 regd_users.put("/auth/review/:isbn", (req, res) => {
-  //Write your code here
-  return res.send(req.session)
+
+    let book=books[req.params.isbn];
+    let found=false;
+
+    if(Object.keys(book.reviews).length <= 0)
+    {
+        book.reviews= [];
+    }
+
+
+    for (let i=0 ; i<Object.keys(book.reviews).length ;i++)
+    {
+        if(book.reviews["username"]==req.session.username)
+        {
+            found=true;
+            book.reviews[i]={"username": req.session.authorization.username, "review": req.body.review};
+            return res.send("Review Updated!");
+        }
+    }
+
+    if(!found)
+    {
+        book.reviews.push({"username": req.session.authorization.username, "review": req.body.review});
+
+        return res.send("Review added!");
+    }
+    
+  
+  return res.send(req.session.authorization.username + "book" + JSON.stringify(book.reviews))
+});
+
+regd_users.delete("/auth/review/:isbn", (req, res) => {
+
+    let book=books[req.params.isbn];
+    let found=false;
+
+    for (let i=0 ; i<Object.keys(book.reviews).length ;i++)
+    {
+        if(book.reviews["username"]==req.session.username)
+        {
+            
+            found=true;
+            let filteredlist=book.reviews.filter((review) => {
+                if(review.user !== req.session.username)
+                {
+                    return review;
+                }
+            });
+    
+            book.reviews=filteredlist;
+            return res.send("Review Deleted");
+        }
+    }
+
+    if(!found)
+    {
+        book.reviews[req.session.authorization]={"username": req.session.authorization.username, "review": req.body.review};
+
+        return res.send("Review not found");
+    }
+
 });
 
 module.exports.authenticated = regd_users;
